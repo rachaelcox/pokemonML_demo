@@ -1,30 +1,148 @@
 ---
-title: "poke_random_forest"
+title: "Predicting legendary Pokemon with a Random Forest model"
 author: "Rachael M. Cox"
-date: "10/8/2019"
+date: "12/4/2019"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+Before we start building the machine learning model, there are some questions we should ask ourselves first.
+
+## Setting up the environment
+
+First we need to set up how we want our output to look (knitr, a feature of R Markdown, will take care of this for us) and install/load the R packages we will need for our experiment today.
+
+*PRO-TIP: you can execute a single line of code with the shortcut 'Ctrl+Enter' or a whole chunk of code with 'Ctrl+Shift+Enter'*
+
+```{r setup, results='hide'}
+
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(tidy = TRUE)
+
+#install.packages("caret")
+#install.packages("mlbench")
+#install.packages("tidyverse")
+#install.packages("caretEnsemble")
+#install.packages("skimr")
+#install.packages("RANN")
+
+
+library(tidyverse) # collection of packages for easy data import, tidying, manipulation and visualization
+library(skimr) # package for getting dataset stats at a glance
+library(caret) # package for "Classification And REgression Training"
+library(caretEnsemble)
+library(RANN) # required for some caret functions
+
+library(mlbench) # package for benchmarking machine learning models
+
+
+
+setwd("/stor/work/Marcotte/project/rmcox/github_repos/pokemon_machine_learning_demo/")
+
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+## Importing and exploring the data
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+Next we will need to load the Pokemon data into our environment. This is a publicly available dataset scraped a couple years ago from http://serebii.net/ and contains information on the 802 Pokemon comprising Generations 1-7. 
 
-```{r cars}
-summary(cars)
+The information contained in this dataset include Base Stats, Performance against Other Types, Height, Weight, Classification, Egg Steps, Experience Points, Abilities, etc.
+
+*PRO-TIP: you can make a pipe (%>%) with the shortcut 'Ctrl+Shift+M'*
+
+```{r data exploration and preprocessing}
+
+# The read_csv() function loads in the data and automatically detects it as comma-delimited.
+# Initially the data is in alphabetical order, so I've used the select() function to move Pokemon names to the first column for ease of data exploration.
+poke_data <- read_csv("pokemon_data_all.csv", col_names=TRUE) %>%
+  select(name, everything()) 
+
+# The glimpse() function is nice for looking at all the variable names and types.
+# You can see there are 801 pokemon ("observations") and 41 features ("variables").
+glimpse(poke_data) 
+
+# The head() function lets us look at the first few rows of the dataframe and its format.
+head(poke_data)
+
+# Luckily our dataset is already in the right format, with individual observations as rows and features as columns.
+# If this were not the case, we would have to use gather() or spread() to get it in the right format.
+
+# Let's explore the distrbution of our target variable and see if there is any class imbalance.
+ggplot(poke_data, aes(x=is_legendary)) +
+  geom_bar() +
+  scale_x_continuous(breaks=0:1, 
+                     labels=c("Non-Legendary","Legendary")) +
+  ylab("Number of Pokemon") +
+  xlab("")
+
+poke_data %>% tally(is_legendary > 0)
+
+# Yikes, it looks like our dataset is seriously imbalanced!
+# This is another common issue in datasets used for classification.
+# We'll come back to that later.
+
+# The next step is to look for missing data, a common problem in big datasets. The skimr package provides a nice solution for this, along with showing key descriptive stats for each column.
+skim(poke_data)
+
+# Looks like we have a little bit of missing data. Let's explore that a little further.
+
+# In our columns with character values, almost half the data set is missing a value for "type2."
+# If you're familiar with Pokemon, you know that's perfectly valid for a Pokemon to only have one type.
+# Since the characteristic of only having one type might be important to a Pokemon's legendary status, we can feel justified in replacing all the "NA" values in the "type2" column to "none."
+poke_data$type2[is.na(poke_data$type2)] <- "none"
+
+# Let's see how that changes our skimmed output.
+skim(poke_data)
+
+# We also have missing values in our numeric columns.
+poke_data %>% filter(is.na(weight_kg)) %>% tally(is_legendary > 0)
+poke_data %>% filter(is.na(height_m)) %>% tally(is_legendary > 0)
+poke_data %>% filter(is.na(percentage_male)) %>% tally(is_legendary > 0)
+
+# Missing values in the percentage_male column is particularly problematic, since there are a lot of legendary Pokemon in this subset.
+# It's common practive to replace missing continuous values with the mean of the column, or categorical values with the  mode of the column, but this is a rather rudimentary approach.
+# Instead, we're going to impute the missing values by considering the rest of the available variables as predictors using the k-nearest Neighbors algorithm. Luckily caret has a built-in function for this, preProcess().
+
+poke_missingdata_model <- preProcess(poke_data, method='knnImpute')
+
+poke_missingdata_model
+
+# The output shows that the model has centered (substract by mean) 34 variables, ignored 7 variables, used k=5 (considered 5 nearest neighbors) to predict missing values and finally scaled (divide by standard deviation) 34 variables.
+# Now let's use this model to predict the missing values.
+poke_data_pp <- predict(poke_missingdata_model, newdata = poke_data)
+
+# Check to see if any N/A values remain. If FALSE, all values have been successfully imputed.
+anyNA(poke_data_pp)
+
+
+
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
+```{r }
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r }
+
+
+```
+
+## Feature engineering
+
+ 
+
+```{r feature selection}
+
+
+```
+
+
+## Training and tuning the model
+
+We need to split the dataset into training data (80%) and test data (20%). When building the predictive model, the algorithm should only see the training data to learn the relationship between Pokemon stats and their legendary status. Learned information about these relationships become our machine learning model.
+
+```{r model training and tuning}
+
+
+```
