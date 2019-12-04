@@ -8,5 +8,5 @@ Repository for machine learning demo for predicting legendary Lokemon in R
 4. Select '[Assignment] Pokemon Machine Learning' (can take a sec to load)
 5. Double-click 'poke_random_forest.Rmd' in bottom right panel.
 
-## To fix the way plots display:
+### To fix the way plots display on the RStudio Cloud server:
 At the top, go to 'Tools' -> 'Global Options...' -> 'R Markdown' -> uncheck 'Show output inline for all R Markdown documents'
