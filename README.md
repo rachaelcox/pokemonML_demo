@@ -2,7 +2,7 @@
 Repository for machine learning demo for predicting legendary Lokemon in R
 
 # Accessing the RStudio Cloud server
-1. Navigate to: https://rstudio.cloud/spaces/31493/project/771919
+1. Navigate to: https://rstudio.cloud/spaces/31493/
 2. Click 'Log in with Google' for fast/easy access
 3. In the left panel, select 'codealong' under 'Spaces'
 4. Select '[Assignment] Pokemon Machine Learning' (can take a sec to load)
